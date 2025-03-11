@@ -34,8 +34,8 @@
 # 
 # 
 # 
-# <p style="text-align: right;">Выполнил: Фамилия И.О.
-# <p style="text-align: right;">гр. 613X-020402D
+# <p style="text-align: right;">Выполнил: Яшин И.А.
+# <p style="text-align: right;">гр. 6132-020402D
 # <p style="text-align: right;">
 # <br><br><br><br><br><br><br><br><br>
 # 
@@ -57,31 +57,32 @@
 from typing import NamedTuple # requires python 3.6+
 from typing import Iterator
 
-# %%
-def MAP(_, row:NamedTuple):
-  if (row.gender == 'female'):
-    yield (row.age, row)
-    
-def REDUCE(age:str, rows:Iterator[NamedTuple]):
-  sum = 0
-  count = 0
-  for row in rows:
-    sum += row.social_contacts
-    count += 1
-  if (count > 0):
-    yield (age, sum/count)
-  else:
-    yield (age, 0)
-
 # %% [markdown]
 # Модель элемента данных
 
 # %%
 class User(NamedTuple):
   id: int
-  age: str
+  age: int
   social_contacts: int
   gender: str
+
+# %%
+def MAP(_, row: User):
+    if row.gender == "female":
+        yield (row.age, row)
+
+
+def REDUCE(age: str, rows: Iterator[User]):
+    sum = 0
+    count = 0
+    for row in rows:
+        sum += row.social_contacts
+        count += 1
+    if count > 0:
+        yield (age, sum / count)
+    else:
+        yield (age, 0)
 
 # %%
 input_collection = [
@@ -98,14 +99,20 @@ input_collection = [
 def RECORDREADER():
   return [(u.id, u) for u in input_collection]
 
-# %%
-list(RECORDREADER())
+RECORDREADER()
 
 # %%
-def flatten(nested_iterable):
-  for iterable in nested_iterable:
-    for element in iterable:
-      yield element
+from itertools import chain
+
+
+def flatten_deprecated(nested_iterable):
+    for iterable in nested_iterable:
+        for element in iterable:
+            yield element
+
+
+flatten = chain.from_iterable
+assert list(flatten_deprecated([[1, 2], [3, 4]])) == list(flatten([[1, 2], [3, 4]])) == [1, 2, 3, 4]
 
 # %%
 map_output = flatten(map(lambda x: MAP(*x), RECORDREADER()))
@@ -113,11 +120,28 @@ map_output = list(map_output) # materialize
 map_output
 
 # %%
+from collections import defaultdict
+
+
+def groupbykey_deprecated(iterable):
+    t = {}
+    for k2, v2 in iterable:
+        t[k2] = t.get(k2, []) + [v2]
+    return t.items()
+
+
 def groupbykey(iterable):
-  t = {}
-  for (k2, v2) in iterable:
-    t[k2] = t.get(k2, []) + [v2]
-  return t.items()
+    t = defaultdict(list)
+    for k2, v2 in iterable:
+        t[k2].append(v2)
+    return t.items()
+
+
+assert (
+    list(groupbykey_deprecated([(1, "a"), (2, "b"), (2, "c")]))
+    == list(groupbykey([(1, "a"), (2, "b"), (2, "c")]))
+    == [(1, ["a"]), (2, ["b", "c"])]
+)
 
 # %%
 shuffle_output = groupbykey(map_output)
@@ -142,19 +166,21 @@ list(flatten(map(lambda x: REDUCE(*x), groupbykey(flatten(map(lambda x: MAP(*x),
 # Пользователь для решения своей задачи реализует RECORDREADER, MAP, REDUCE.
 
 # %%
-def flatten(nested_iterable):
-  for iterable in nested_iterable:
-    for element in iterable:
-      yield element
+from collections import defaultdict
+from itertools import chain
+
+flatten = chain.from_iterable
+
 
 def groupbykey(iterable):
-  t = {}
-  for (k2, v2) in iterable:
-    t[k2] = t.get(k2, []) + [v2]
-  return t.items()
+    t = defaultdict(list)
+    for k2, v2 in iterable:
+        t[k2].append(v2)
+    return t.items()
+
 
 def MapReduce(RECORDREADER, MAP, REDUCE):
-  return flatten(map(lambda x: REDUCE(*x), groupbykey(flatten(map(lambda x: MAP(*x), RECORDREADER())))))
+    return flatten(map(lambda x: REDUCE(*x), groupbykey(flatten(map(lambda x: MAP(*x), RECORDREADER())))))
 
 # %% [markdown]
 # ## Спецификация MapReduce
@@ -182,39 +208,45 @@ def MapReduce(RECORDREADER, MAP, REDUCE):
 # ## SQL 
 
 # %%
-from typing import NamedTuple # requires python 3.6+
+from typing import NamedTuple  # requires python 3.6+
 from typing import Iterator
 
+
 class User(NamedTuple):
-  id: int
-  age: str
-  social_contacts: int
-  gender: str
-    
+    id: int
+    age: int
+    social_contacts: int
+    gender: str
+
+
 input_collection = [
-    User(id=0, age=55, gender='male', social_contacts=20),
-    User(id=1, age=25, gender='female', social_contacts=240),
-    User(id=2, age=25, gender='female', social_contacts=500),
-    User(id=3, age=33, gender='female', social_contacts=800)
+    User(id=0, age=55, gender="male", social_contacts=20),
+    User(id=1, age=25, gender="female", social_contacts=240),
+    User(id=2, age=25, gender="female", social_contacts=500),
+    User(id=3, age=33, gender="female", social_contacts=800),
 ]
 
-def MAP(_, row:NamedTuple):
-  if (row.gender == 'female'):
-    yield (row.age, row)
-    
-def REDUCE(age:str, rows:Iterator[NamedTuple]):
-  sum = 0
-  count = 0
-  for row in rows:
-    sum += row.social_contacts
-    count += 1
-  if (count > 0):
-    yield (age, sum/count)
-  else:
-    yield (age, 0)
- 
+
+def MAP(_, row: User):
+    if row.gender == "female":
+        yield (row.age, row)
+
+
+def REDUCE(age: str, rows: Iterator[User]):
+    sum = 0
+    count = 0
+    for row in rows:
+        sum += row.social_contacts
+        count += 1
+    if count > 0:
+        yield (age, sum / count)
+    else:
+        yield (age, 0)
+
+
 def RECORDREADER():
-  return [(u.id, u) for u in input_collection]
+    return [(u.id, u) for u in input_collection]
+
 
 output = MapReduce(RECORDREADER, MAP, REDUCE)
 output = list(output)
@@ -230,7 +262,7 @@ import numpy as np
 mat = np.ones((5,4))
 vec = np.random.rand(4) # in-memory vector in all map tasks
 
-def MAP(coordinates:(int, int), value:int):
+def MAP(coordinates:tuple[int, int], value:int):
   i, j = coordinates
   yield (i, value*vec[j])
  
@@ -262,8 +294,8 @@ documents = [d1, d2, d3]
 
 def RECORDREADER():
   for (docid, document) in enumerate(documents):
-    yield ("{}".format(docid), document)
-      
+    yield (str(docid), document)
+
 def MAP(docId:str, body:str):
   for word in set(body.split(' ')):
     yield (word, docId)
@@ -295,7 +327,7 @@ documents = [d1, d2, d3]
 def RECORDREADER():
   for (docid, document) in enumerate(documents):
     for (lineid, line) in enumerate(document.split('\n')):
-      yield ("{}:{}".format(docid,lineid), line)
+      yield (f"{docid}:{lineid}", line)
 
 def MAP(docId:str, line:str):
   for word in line.split(" "):  
@@ -314,42 +346,54 @@ output
 # %% [markdown]
 # # MapReduce Distributed
 # 
-# Добавляется в модель фабрика RECORDREARER-ов --- INPUTFORMAT, функция распределения промежуточных результатов по партициям PARTITIONER, и функция COMBINER для частичной аггрегации промежуточных результатов до распределения по новым партициям.
+# Добавляется в модель фабрика RECORDREADER-ов --- INPUTFORMAT, функция распределения промежуточных результатов по партициям PARTITIONER, и функция COMBINER для частичной аггрегации промежуточных результатов до распределения по новым партициям.
 
 # %%
 def flatten(nested_iterable):
-  for iterable in nested_iterable:
-    for element in iterable:
-      yield element
+    for iterable in nested_iterable:
+        for element in iterable:
+            yield element
+
 
 def groupbykey(iterable):
-  t = {}
-  for (k2, v2) in iterable:
-    t[k2] = t.get(k2, []) + [v2]
-  return t.items()
-      
+    t = {}
+    for k2, v2 in iterable:
+        t[k2] = t.get(k2, []) + [v2]
+    return t.items()
+
+
 def groupbykey_distributed(map_partitions, PARTITIONER):
-  global reducers
-  partitions = [dict() for _ in range(reducers)]
-  for map_partition in map_partitions:
-    for (k2, v2) in map_partition:
-      p = partitions[PARTITIONER(k2)]
-      p[k2] = p.get(k2, []) + [v2]
-  return [(partition_id, sorted(partition.items(), key=lambda x: x[0])) for (partition_id, partition) in enumerate(partitions)]
- 
+    global reducers
+    partitions = [dict() for _ in range(reducers)]
+    for map_partition in map_partitions:
+        for k2, v2 in map_partition:
+            p = partitions[PARTITIONER(k2)]
+            p[k2] = p.get(k2, []) + [v2]
+    return [
+        (partition_id, sorted(partition.items(), key=lambda x: x[0]))
+        for (partition_id, partition) in enumerate(partitions)
+    ]
+
+
 def PARTITIONER(obj):
-  global reducers
-  return hash(obj) % reducers
-  
+    global reducers
+    return hash(obj) % reducers
+
+
 def MapReduceDistributed(INPUTFORMAT, MAP, REDUCE, PARTITIONER=PARTITIONER, COMBINER=None):
-  map_partitions = map(lambda record_reader: flatten(map(lambda k1v1: MAP(*k1v1), record_reader)), INPUTFORMAT())
-  if COMBINER != None:
-    map_partitions = map(lambda map_partition: flatten(map(lambda k2v2: COMBINER(*k2v2), groupbykey(map_partition))), map_partitions)
-  reduce_partitions = groupbykey_distributed(map_partitions, PARTITIONER) # shuffle
-  reduce_outputs = map(lambda reduce_partition: (reduce_partition[0], flatten(map(lambda reduce_input_group: REDUCE(*reduce_input_group), reduce_partition[1]))), reduce_partitions)
-  
-  print("{} key-value pairs were sent over a network.".format(sum([len(vs) for (k,vs) in flatten([partition for (partition_id, partition) in reduce_partitions])])))
-  return reduce_outputs
+    map_partitions = (flatten((MAP(*k1v1) for k1v1 in record_reader)) for record_reader in INPUTFORMAT())
+    if COMBINER != None:
+        map_partitions = (
+            flatten((COMBINER(*k2v2) for k2v2 in groupbykey(map_partition))) for map_partition in map_partitions
+        )
+    reduce_partitions = groupbykey_distributed(map_partitions, PARTITIONER)  # shuffle
+    reduce_outputs = (
+        (reduce_partition[0], flatten((REDUCE(*reduce_input_group) for reduce_input_group in reduce_partition[1])))
+        for reduce_partition in reduce_partitions
+    )
+    sum_result = sum([len(vs) for (k, vs) in flatten([partition for (partition_id, partition) in reduce_partitions])])
+    print(f"{sum_result} key-value pairs were sent over a network.")
+    return reduce_outputs
 
 # %% [markdown]
 # ## Спецификация MapReduce Distributed
@@ -399,15 +443,15 @@ def INPUTFORMAT():
   
   def RECORDREADER(split):
     for (docid, document) in enumerate(split):
-      for (lineid, line) in enumerate(document.split('\n')):
+      for (lineid, line) in enumerate(document.split()):
         yield ("{}:{}".format(docid,lineid), line)
       
-  split_size =  int(np.ceil(len(documents)/maps))
+  split_size = int(np.ceil(len(documents)/maps))
   for i in range(0, len(documents), split_size):
     yield RECORDREADER(documents[i:i+split_size])
 
 def MAP(docId:str, line:str):
-  for word in line.split(" "):  
+  for word in line.split():  
     yield (word, 1)
  
 def REDUCE(word:str, counts:Iterator[int]):
@@ -464,9 +508,6 @@ partitioned_output = MapReduceDistributed(INPUTFORMAT, MAP, REDUCE, COMBINER=Non
 partitioned_output = [(partition_id, list(partition)) for (partition_id, partition) in partitioned_output]
 partitioned_output
 
-# %%
-
-
 # %% [markdown]
 # # Упражнения
 # Упражнения взяты из Rajaraman A., Ullman J. D. Mining of massive datasets. – Cambridge University Press, 2011.
@@ -481,7 +522,25 @@ partitioned_output
 # Разработайте MapReduce алгоритм, который находит максимальное число входного списка чисел.
 
 # %%
+num_lists = [np.random.randint(0, 50, 6) for _ in range(3)]
+print("Input", *num_lists, sep="\n")
 
+
+def RECORDREADER():
+    for list_id, num_list in enumerate(num_lists):
+        yield (list_id, num_list)
+
+
+def MAP(list_id: int, num_list: np.ndarray):
+    return ((list_id, num) for num in num_list)
+
+
+def REDUCE(list_id: int, numbers: Iterator):
+    yield (list_id, max(numbers).item())
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", *output, sep="\n")
 
 # %% [markdown]
 # ### Арифметическое среднее
@@ -492,10 +551,29 @@ partitioned_output
 # 
 
 # %%
+num_lists = [np.random.randint(0, 10, 4) for _ in range(3)]
+print("Input", *num_lists, sep="\n")
 
 
-# %%
+def RECORDREADER():
+    for list_id, num_list in enumerate(num_lists):
+        yield (list_id, num_list)
 
+
+def MAP(list_id: int, num_list: np.ndarray):
+    return ((list_id, num) for num in num_list)
+
+
+def REDUCE(list_id: int, numbers: Iterator):
+    i = 0
+    total = np.int32()
+    for i, num in enumerate(numbers):
+        total += num
+    yield (list_id, total.item() / (i + 1))
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", *output, sep="\n")
 
 # %% [markdown]
 # ### Drop duplicates (set construction, unique elements, distinct)
@@ -503,7 +581,38 @@ partitioned_output
 # Реализуйте распределённую операцию исключения дубликатов
 
 # %%
+sequences = [np.random.randint(0, 15, (4, 4)) for _ in range(3)]
+print("Input", *sequences, sep="\n")
 
+reducers = 2
+def PARTITIONER(seq_id: int):
+    return int(seq_id >= 1)
+
+
+def INPUTFORMAT():
+    def RECORDREADER(seq_id, seq_parts: np.ndarray):
+        for part_id, part in enumerate(seq_parts):
+            yield ((seq_id, part_id), part)
+
+    for i, seq in enumerate(sequences):
+        yield RECORDREADER(i, seq)
+
+
+def MAP(id: tuple[int, int], num_list: np.ndarray):
+    return (((*id, num.item()), num) for num in num_list)
+
+
+def COMBINER(id: tuple[int, int, int], numbers: Iterator):
+    seq_id, part_id, num = id
+    yield (seq_id, num)  # multiple numbers in one line cuts here
+
+
+def REDUCE(seq_id: int, numbers: Iterator):
+    yield (seq_id, set(numbers))  # get rid of duplicates across rows
+
+
+output = MapReduceDistributed(INPUTFORMAT, MAP, REDUCE, PARTITIONER, COMBINER)
+print("Output", *[(i, list(res)) for i, res in output], sep="\n")
 
 # %% [markdown]
 # ## Операторы реляционной алгебры
@@ -516,7 +625,33 @@ partitioned_output
 # 
 
 # %%
+from typing import Sequence
+import random
 
+num_lists = [tuple(random.randint(0, 10) for _ in range(5)) for _ in range(6)]
+print("Input", *num_lists, sep="\n")
+
+
+def most_nums_are_even(seq: Sequence):
+    return sum(1 for num in seq if num % 2 == 0) * 2 >= len(seq)
+
+
+def RECORDREADER():
+    for list_id, num_list in enumerate(num_lists):
+        yield (list_id, num_list)
+
+
+def MAP(list_id: int, num_list: Sequence):
+    if most_nums_are_even(num_list):
+        yield (num_list, num_list)
+
+
+def REDUCE(numbers_key: int, numbers_value: Iterator):
+    yield (numbers_key, numbers_value)
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", *output, sep="\n")
 
 # %% [markdown]
 # ### Projection (Проекция)
@@ -528,7 +663,28 @@ partitioned_output
 # **The Reduce Function:** Для каждого ключа $t′$, созданного любой Map задачей, вы получаете одну или несколько пар $(t′, t′)$. Reduce функция преобразует $(t′, [t′, t′, . . . , t′])$ в $(t′, t′)$, так, что для ключа $t′$ возвращается одна пара  $(t′, t′)$.
 
 # %%
+tuples = [tuple(random.randint(0, 10) for _ in range(10)) for _ in range(3)]
+S = set(range(6))
+print("Input", *tuples, "S", S, sep="\n")
 
+
+def RECORDREADER():
+    for list_id, num_list in enumerate(tuples):
+        yield (list_id, num_list)
+
+
+def MAP(list_id: int, num_list: Sequence):
+    for num in num_list:
+        if num in S:
+            yield (list_id, num)
+
+
+def REDUCE(list_id: int, numbers: Iterator):
+    yield (numbers, numbers)
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", *output, sep="\n")
 
 # %% [markdown]
 # ### Union (Объединение)
@@ -538,7 +694,26 @@ partitioned_output
 # **The Reduce Function:** С каждым ключом $t$ будет ассоциировано одно или два значений. В обоих случаях создайте $(t, t)$ в качестве выходного значения.
 
 # %%
+tuples = [tuple(random.randint(0, 10) for _ in range(5)) for _ in range(2)]
+print("Input", *tuples, sep="\n")
 
+
+def RECORDREADER():
+    for list_id, num_list in enumerate(tuples):
+        yield (list_id, num_list)
+
+
+def MAP(list_id: int, num_list: Sequence):
+    for num in num_list:
+        yield (num, num)
+
+
+def REDUCE(num: int, numbers: Iterator):
+    yield (num, num)
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", [k for k, _ in output], sep="\n")
 
 # %% [markdown]
 # ### Intersection (Пересечение)
@@ -548,7 +723,28 @@ partitioned_output
 # **The Reduce Function:** Если для ключа $t$ есть список из двух элементов $[t, t]$ $-$ создайте пару $(t, t)$. Иначе, ничего не создавайте.
 
 # %%
+TUPLES_NUM = 2
+tuples = [random.sample(range(0, 10), 5) for _ in range(TUPLES_NUM)]
+print("Input", *tuples, sep="\n")
 
+
+def RECORDREADER():
+    for list_id, num_list in enumerate(tuples):
+        yield (list_id, num_list)
+
+
+def MAP(list_id: int, num_list: Sequence):
+    for num in num_list:
+        yield (num, num)
+
+
+def REDUCE(num: int, numbers: Iterator):
+    if sum(1 for _ in numbers) == TUPLES_NUM:
+        yield (num, num)
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", [k for k, _ in output], sep="\n")
 
 # %% [markdown]
 # ### Difference (Разница)
@@ -558,7 +754,33 @@ partitioned_output
 # **The Reduce Function:** Для каждого ключа $t$, если соответствующее значение является списком $[R]$, создайте пару $(t, t)$. В иных случаях не предпринимайте действий.
 
 # %%
+R, S = [random.sample(range(0, 10), 5) for _ in range(2)]
+print("Input", R, S, sep="\n")
 
+
+def RECORDREADER():
+    for is_R, num_list in zip((True, False), (R, S)):
+        yield (is_R, num_list)
+
+
+def MAP(is_R: bool, num_list: Sequence):
+    for num in num_list:
+        yield (num, is_R)
+
+
+def REDUCE(num: int, flags: Iterator):
+    is_R_occured = False
+    for is_R in flags:
+        if not is_R:
+            break
+        is_R_occured = True
+    else:
+        if is_R_occured:
+            yield (num, num)
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", [k for k, _ in output], sep="\n")
 
 # %% [markdown]
 # ### Natural Join
@@ -568,7 +790,35 @@ partitioned_output
 # **The Reduce Function:** Каждый ключ $b$ будет асоциирован со списком пар, которые принимают форму либо $(R, a)$, либо $(S, c)$. Создайте все пары, одни, состоящие из  первого компонента $R$, а другие, из первого компонента $S$, то есть $(R, a)$ и $(S, c)$. На выходе вы получаете последовательность пар ключ-значение из списков ключей и значений. Ключ не нужен. Каждое значение, это тройка $(a, b, c)$ такая, что $(R, a)$ и $(S, c)$ это принадлежат входному списку значений.
 
 # %%
+b_values = random.sample(range(0, 10), 5)
+(*R,) = zip((random.randint(0, 50) for _ in range(5)), b_values)
+(*S,) = zip(b_values, (random.randint(0, 50) for _ in range(5)))
+random.shuffle(S)
+print("Input", R, S, sep="\n")
 
+
+def RECORDREADER():
+    for is_R, num_list in zip((True, False), (R, S)):
+        yield (is_R, num_list)
+
+
+def MAP(is_R: bool, paris_list: Sequence):
+    for pair in paris_list:
+        if is_R:
+            a, b = pair
+            yield (b, (True, a))
+        else:
+            b, c = pair
+            yield (b, (False, c))
+
+
+def REDUCE(b: int, pairs: Iterator[tuple[bool, int]]):
+    c, a = map(lambda pair: pair[1], sorted(pairs))
+    yield (a, b, c)
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", *output, sep="\n")
 
 # %% [markdown]
 # ### Grouping and Aggregation (Группировка и аггрегация)
@@ -578,7 +828,26 @@ partitioned_output
 # **The Reduce Function:** Ключ представляет ту или иную группу. Примение аггрегирующую операцию $\theta$ к списку значений $[b1, b2, . . . , bn]$ ассоциированных с ключом $a$. Возвращайте в выходной поток $(a, x)$, где $x$ результат применения  $\theta$ к списку. Например, если $\theta$ это $SUM$, тогда $x = b1 + b2 + · · · + bn$, а если $\theta$ is $MAX$, тогда $x$ это максимальное из значений $b1, b2, . . . , bn$.
 
 # %%
+triples_list = [(random.randint(0,3), random.randint(0,50), random.randint(0,50)) for _ in range(5)]
+print("Input", *triples_list, sep="\n")
 
+
+def RECORDREADER():
+    for triple_id, triple in enumerate(triples_list):
+        yield (triple_id, triple)
+
+
+def MAP(triple_id: int, triple: tuple[int, ...]):
+    a, b, c = triple
+    yield (a, b)
+
+
+def REDUCE(a: int, b_list: list[int]):
+    yield (a, sum(b_list))
+
+
+output = MapReduce(RECORDREADER, MAP, REDUCE)
+print("Output", *output, sep="\n")
 
 # %% [markdown]
 # ## Вычисление TF-IDF (Term Frequency – Inverse Document Fraquency)
@@ -592,6 +861,61 @@ partitioned_output
 # **Этап 3:** Расчёт TF-IDF
 
 # %%
+from collections.abc import Iterable
+import math
+from typing import cast
 
+
+source_text = """Творчество наполняет жизнь яркими моментами и помогает выразить свои чувства и мысли
+Искусство вдохновляет нас на творчество и позволяет делиться своими чувствами с миром
+Вдохновение приходит от искусства и творчества наполняя нашу жизнь новыми идеями и эмоциями
+Эмоции рождающиеся в процессе творчества делают искусство живым и трогательным для каждого
+Жизнь полна эмоций и творчество помогает нам осознать эти эмоции через искусство и вдохновение"""
+docs = [line.split() for line in source_text.lower().split("\n")]
+print("Input", source_text, sep="\n")
+
+def RECORDREADER():
+    for doc_id, words in enumerate(docs):
+        yield (doc_id, words)
+
+# TF
+def MAP_TF(doc_id, words):
+    words = list(words)
+    word_weight = 1 / len(words)
+    for word in words:
+        yield (doc_id, word), word_weight
+def REDUCE_TF(id: tuple[int, str], weights):
+    yield (id, sum(weights))
+type TF_TYPE = tuple[tuple[int, str], float]
+tf: Iterable[TF_TYPE] = MapReduce(RECORDREADER, MAP_TF, REDUCE_TF)
+
+# IDF
+def MAP_IDF(doc_id, words):
+    for word in words:
+        yield (word, doc_id)
+def REDUCE_IDF(word, doc_ids):
+    yield (word, math.log(len(docs) / len(set(doc_ids))))
+type IDF_TYPE = tuple[str, float]
+idf: Iterable[IDF_TYPE] = MapReduce(RECORDREADER, MAP_IDF, REDUCE_IDF)
+
+# TF-IDF
+def RECORDREADER_TFIDF():
+    for tfi in tf:
+        yield True, tfi  # is TF flag
+    for idfi in idf:
+        yield False, idfi
+def MAP_TFIDF(is_tf: bool, data):
+    if is_tf:
+        (doc_id, word), tf_data = cast(TF_TYPE, data)
+        yield (word, doc_id), tf_data
+    else:
+        word, idf_data = cast(IDF_TYPE, data)
+        for doc_id in range(len(docs)):
+            yield (word, doc_id), idf_data
+def REDUCE_TFIDF(word_doc, tf_idf):
+    muls = list(tf_idf)
+    yield (word_doc, muls[0]*muls[1] if len(muls) == 2 else 0)
+tfidf = MapReduce(RECORDREADER_TFIDF, MAP_TFIDF, REDUCE_TFIDF)
+print("Output", *tfidf, sep="\n")
 
 
