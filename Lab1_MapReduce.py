@@ -865,12 +865,14 @@ from collections.abc import Iterable
 import math
 from typing import cast
 
-
+# TO BROTHERS: текст нужно заменить на тот, который в примере в исходном файле. На момент моей работы, входных данных ещё не было
 source_text = """Творчество наполняет жизнь яркими моментами и помогает выразить свои чувства и мысли
 Искусство вдохновляет нас на творчество и позволяет делиться своими чувствами с миром
 Вдохновение приходит от искусства и творчества наполняя нашу жизнь новыми идеями и эмоциями
 Эмоции рождающиеся в процессе творчества делают искусство живым и трогательным для каждого
 Жизнь полна эмоций и творчество помогает нам осознать эти эмоции через искусство и вдохновение"""
+# TO BROTHERS: в исходном тексте будут знаки препинания, их можно убрать кодом вроде следующего
+# sentence = "".join(filter(lambda char: char.isalnum() or char == " ", sent_raw))
 docs = [line.split() for line in source_text.lower().split("\n")]
 print("Input", source_text, sep="\n")
 
@@ -900,6 +902,9 @@ idf: Iterable[IDF_TYPE] = MapReduce(RECORDREADER, MAP_IDF, REDUCE_IDF)
 
 # TF-IDF
 def RECORDREADER_TFIDF():
+    # TO BROTHERS: вот тут вопрос, что можно было бы и не выделять 2 tf и idf в отдельные таблицы, а посчитать их в одном жирном запуске,
+    # и хранить вероятно с такими же флагами. Но мне не понравилось, т.к. что-то будет дублироваться, а в реальности всё усугубляется ещё и репликацией
+    # Ссылается на псевдокод со 2 лекции (не знаю что там)
     for tfi in tf:
         yield True, tfi  # is TF flag
     for idfi in idf:
@@ -917,5 +922,7 @@ def REDUCE_TFIDF(word_doc, tf_idf):
     yield (word_doc, muls[0]*muls[1] if len(muls) == 2 else 0)
 tfidf = MapReduce(RECORDREADER_TFIDF, MAP_TFIDF, REDUCE_TFIDF)
 print("Output", *tfidf, sep="\n")
+# TO BROTHERS: вывод должен иметь группировку по документу (id дока), и в каждом вывести 5-10 слов с наивысшим tf-idf
+# если в решении от чата увидите itertools.groupby и sorted, скорее всего вы на правильном пути
 
 
