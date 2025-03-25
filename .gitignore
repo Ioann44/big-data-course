@@ -1,3 +1,4 @@
 .venv
-*.ipynb
-!cleaned/*.ipynb
+lw*/**
+!lw_*
+!*.ipynb
