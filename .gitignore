@@ -2,3 +2,4 @@
 lw*/**
 !lw_*
 !*.ipynb
+!*.pdf
