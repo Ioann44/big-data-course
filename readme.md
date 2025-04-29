@@ -14,3 +14,6 @@ apt install -y openjdk-8-jdk
 # python (all platforms, venv recommended but not necessary)
 pip install requirements.txt
 ```
+
+# lw 3
+Python 3.12 is used. The second to last cell is not needed.
