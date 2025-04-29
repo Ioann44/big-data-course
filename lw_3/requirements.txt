@@ -35,6 +35,7 @@ pytz==2025.2
 pyzmq==26.4.0
 scikit-learn==1.6.1
 scipy==1.15.2
+seaborn==0.13.2
 six==1.17.0
 stack-data==0.6.3
 threadpoolctl==3.6.0

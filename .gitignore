@@ -1,5 +1,7 @@
-.venv
 lw*/**
 !lw_*
+!lw_3/*
+.venv
+.ipynb_checkpoints
 !*.ipynb
 !*.pdf
